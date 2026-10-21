@@ -52,19 +52,41 @@ The script shuffles the rows, uses an 80/20 train/test split, standardizes the f
 
 Running the training script overwrites those model files. Training is currently separate from the webcam application.
 
+### Important features
+
+| No. | Feature       | Description                                                 | Data Type   |
+| --: | ------------- | ----------------------------------------------------------- | ----------- |
+|   1 | `no_of_face`  | Number of faces found in the frame                          | Integer     |
+|   2 | `face_x`      | X-coordinate of the upper-left corner of the face           | Float       |
+|   3 | `face_y`      | Y-coordinate of the upper-left corner of the face           | Float       |
+|   4 | `face_w`      | Width of the face (in pixels)                               | Float       |
+|   5 | `face_h`      | Height of the face (in pixels)                              | Float       |
+|   6 | `face_con`    | Face detection confidence                                   | Float       |
+|   7 | `no_of_hands` | Number of detected hands                                    | Integer     |
+|   8 | `pose`        | Face orientation (`Forward` \| `Down` \| `Left` \| `Right`) | Categorical |
+|   9 | `pose_x`      | Face orientation in x-axis                                  | Float       |
+|  10 | `pose_y`      | Face orientation in y-axis                                  | Float       |
+|  11 | `phone`       | Presence of a mobile phone (`0` = absent, `1` = present)    | Integer     |
+|  12 | `phone_x`     | X-coordinate of the upper-left corner of the detected phone | Float       |
+|  13 | `phone_y`     | Y-coordinate of the upper-left corner of the detected phone | Float       |
+|  14 | `phone_w`     | Width of the phone (in pixels)                              | Float       |
+|  15 | `phone_h`     | Height of the phone (in pixels)                             | Float       |
+|  16 | `phone_con`   | Phone detection confidence                                  | Float       |
+|  17 | `label`       | Target column (`0` = Attentive, `1` = Inattentive)          | Integer     |
+
 ## Project layout
 
-| Path | Purpose |
-| --- | --- |
-| `main.py` | Opens the webcam and invokes the detector/feature functions for each frame |
-| `create_models.py` | Configures MediaPipe person/cell-phone and hand detectors |
-| `get_features.py` | Extracts person/cell-phone detections and reports the hand count |
-| `train_attention_model.py` | Trains and evaluates the attention SVM using the included CSV |
-| `models/face_recognition_model/` | Included EfficientDet Lite 0 model asset |
-| `models/hand_detection_model/` | Included MediaPipe hand landmark model |
-| `models/attention_model/` | Saved attention SVM and feature scaler |
+| Path                             | Purpose                                                                    |
+| -------------------------------- | -------------------------------------------------------------------------- |
+| `main.py`                        | Opens the webcam and invokes the detector/feature functions for each frame |
+| `create_models.py`               | Configures MediaPipe person/cell-phone and hand detectors                  |
+| `get_features.py`                | Extracts person/cell-phone detections and reports the hand count           |
+| `train_attention_model.py`       | Trains and evaluates the attention SVM using the included CSV              |
+| `models/face_recognition_model/` | Included EfficientDet Lite 0 model asset                                   |
+| `models/hand_detection_model/`   | Included MediaPipe hand landmark model                                     |
+| `models/attention_model/`        | Saved attention SVM and feature scaler                                     |
 
 ## Acknowledgements
 
 - Face/phone detector and hand landmark model assets are from [MediaPipe](https://developers.google.com/mediapipe).
-- The attention model and dataset are based on the *Students Attention Detection Dataset 2023* by Muhammad Kamal Hossen and Mohammad Shorif Uddin.
+- The attention model and dataset are based on the _Students Attention Detection Dataset 2023_ by Muhammad Kamal Hossen and Mohammad Shorif Uddin.

@@ -1,7 +1,8 @@
 import cv2
 import get_features as gf
-import create_models as cm
-import time
+import draw_features as df
+from ultralytics import YOLO
+import mediapipe as mp
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,22 +12,40 @@ capture = cv2.VideoCapture(0)
 if not capture.isOpened():
     print("Error starting webcam")
 
-# create detectors
-fp_detector = cm.createFPDetector()
-h_detector = cm.createHDetector()
+# YOLO detectors
+detModel   = YOLO("/models/yolo/yolo26n.pt")
 
+# BlazeFace detector
+modelPath = "./models/landmarker/face_landmarker.task"
 
-while True:
-    ret, frame = capture.read()
+BaseOptions = mp.tasks.BaseOptions
+FaceLandmarker = mp.tasks.vision.FaceLandmarker
+FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
+VisionRunningMode = mp.tasks.vision.RunningMode
 
-    timestamp_ms = int(time.time() * 1000)
+options = FaceLandmarkerOptions(
+    base_options=BaseOptions(model_asset_path=modelPath),
+    running_mode=VisionRunningMode.VIDEO,
+    num_faces=1,
+)
 
-    features = gf.getFeatures(frame, timestamp_ms, fp_detector, h_detector)
-    
-    cv2.imshow('Webcam Feed', frame)
+frameCount = 0
+fps = 30
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+with FaceLandmarker.create_from_options(options) as landmarker:
+    while True:
+        ret, frame = capture.read()
+
+        timeStamp = int(frameCount * 1000 / fps)
+        frameCount += 1
+
+        features = gf.getFeatures(frame=frame, timeStamp=timeStamp, detModel=detModel, landmarker=landmarker)
+        df.drawFeatures(frame, features)
+        
+        cv2.imshow('Webcam Feed', frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
 capture.release()
 cv2.destroyAllWindows()
