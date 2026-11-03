@@ -218,4 +218,10 @@ __marimo__/
 .streamlit/secrets.toml
 
 # Models
-models
+models/
+
+# Datasets
+datasets/
+
+# Model Training
+model_training/runs/

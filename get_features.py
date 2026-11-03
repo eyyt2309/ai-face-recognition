@@ -1,107 +1,152 @@
+
 import mediapipe as mp
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
 import numpy as np
 import cv2
 
-def getFeatures(frame, timeStamp, detModel, landmarker):
-    detResult = detModel(frame, verbose=False)[0]
+
+def getFeatures(frame, timeStamp, detModel, faceDetector):
     features = {}
+
+    frameHeight, frameWidth = frame.shape[:2]
+
+    # ==================================================
+    # YOLO HAND AND PHONE DETECTION
+    # ==================================================
+
+    # New YOLO26n model:
+    # Class 0 = hand
+    # Class 1 = cell phone
+
+    detResult = detModel(
+        frame,
+        conf=0.25,
+        verbose=False
+    )[0]
+
+    features["no_of_hand"] = 0
+    features["hands"] = []
 
     for box in detResult.boxes:
         cls_id = int(box.cls.item())
-        if detResult.names[cls_id] == "person":
-            x1, y1, x2, y2 = box.xyxy[0].tolist()
-            person = {
-                "x": x1,
-                "y": y1,
-                "w": x2 - x1,
-                "h": y2 - y1,
-                "class": "person",
-                "confidence": float(box.conf.item())
+        confidence = float(box.conf.item())
+
+        x1, y1, x2, y2 = box.xyxy[0].tolist()
+
+        detectedObject = {
+            "x": float(x1),
+            "y": float(y1),
+            "w": float(x2 - x1),
+            "h": float(y2 - y1),
+            "confidence": confidence
+        }
+
+        if cls_id == 0:
+            # Hand detection
+            hand = {
+                **detectedObject,
+                "class": "hand"
             }
-            if "person" not in features:
-                features["person"] = person
-            elif features["person"]["confidence"] < person["confidence"]:
-                features["person"] = person
-        if detResult.names[cls_id] == "cell phone" or detResult.names[cls_id] == "remote":
-            x1, y1, x2, y2 = box.xyxy[0].tolist()
+
+            features["hands"].append(hand)
+
+        elif cls_id == 1:
+            # Phone detection
             phone = {
-                "x": x1,
-                "y": y1,
-                "w": x2 - x1,
-                "h": y2 - y1,
-                "class": "phone",
-                "confidence": float(box.conf.item())
+                **detectedObject,
+                "class": "phone"
             }
-            if "phone" not in features:
-                features["phone"] = phone
-            elif features["phone"]["confidence"] < phone["confidence"]:
+
+            # Keep the highest-confidence phone
+            if (
+                "phone" not in features
+                or confidence > features["phone"]["confidence"]
+            ):
                 features["phone"] = phone
 
-    # Crop image and run pose estimation
-    if "person" in features:
-        x1 = int(features["person"]["x"])
-        y1 = int(features["person"]["y"])
-        x2 = int(features["person"]["x"] + features["person"]["w"])
-        y2 = int(features["person"]["y"] + features["person"]["h"])
-        cropImage = frame[y1:y2, x1:x2]
-        height, width = cropImage.shape[:2]
+    features["no_of_hand"] = len(features["hands"])
 
-        rgbImage = cv2.cvtColor(cropImage, cv2.COLOR_BGR2RGB)
-        mpImage = mp.Image(
-            image_format=mp.ImageFormat.SRGB,
-            data=rgbImage
+    # ==================================================
+    # MEDIAPIPE FACE DETECTION
+    # ==================================================
+
+    # Convert BGR to RGB
+    rgbImage = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    mpImage = mp.Image(
+        image_format=mp.ImageFormat.SRGB,
+        data=rgbImage
+    )
+
+    faceResult = faceDetector.detect_for_video(
+        mpImage,
+        timeStamp
+    )
+
+    features["no_of_face"] = len(faceResult.detections)
+
+    if faceResult.detections:
+        # Select highest-confidence face
+        detection = max(
+            faceResult.detections,
+            key=lambda d: d.categories[0].score
         )
 
+        box = detection.bounding_box
 
-        landmarkerResult = landmarker.detect_for_video(mpImage, timeStamp)
+        pose = getPose(
+            detection.keypoints,
+            frameHeight,
+            frameWidth
+        )
 
-        if landmarkerResult.face_landmarks:
-            faceLandmarks = landmarkerResult.face_landmarks[0]
+        features["face"] = {
+            "x": float(box.origin_x),
+            "y": float(box.origin_y),
+            "w": float(box.width),
+            "h": float(box.height),
+            "class": "face",
+            "confidence": float(detection.categories[0].score),
+            "pose": pose,
+            "keypoints": [
+                {
+                    "x": float(p.x),
+                    "y": float(p.y)
+                }
+                for p in detection.keypoints
+            ]
+        }
 
-            frameHeight, frameWidth = frame.shape[:2]
-
-            features["person"]["pose"] = getPose(
-                faceLandmarks,
-                height,
-                width,
-                frameHeight,
-                frameWidth,
-                x1,
-                y1
-            )
-
-        return features
+    return features
 
 
-
-def getPose(faceLandmarks, cropHeight, cropWidth,
-            frameHeight, frameWidth, offsetX, offsetY):
-
-    indices = [1, 152, 33, 263, 61, 291]
+def getPose(keypoints, frameHeight, frameWidth):
+    # BlazeFace keypoint order:
+    # 0: Right eye
+    # 1: Left eye
+    # 2: Nose tip
+    # 3: Mouth center
+    # 4: Right ear tragion
+    # 5: Left ear tragion
 
     imagePoints = np.array([
         [
-            faceLandmarks[i].x * cropWidth + offsetX,
-            faceLandmarks[i].y * cropHeight + offsetY
+            point.x * frameWidth,
+            point.y * frameHeight
         ]
-        for i in indices
+        for point in keypoints
     ], dtype=np.float64)
 
+    # Approximate 3D face geometry
     modelPoints = np.array([
-        [0.0, 0.0, 0.0],          # Nose
-        [0.0, -330.0, -65.0],    # Chin
-        [-225.0, 170.0, -135.0], # Eye (image left)
-        [225.0, 170.0, -135.0],  # Eye (image right)
-        [-150.0, -150.0, -125.0],# Mouth (image left)
-        [150.0, -150.0, -125.0]  # Mouth (image right)
+        [-32.0, -25.0,   0.0],
+        [ 32.0, -25.0,   0.0],
+        [  0.0,   0.0, -35.0],
+        [  0.0,  35.0,  -5.0],
+        [-75.0,   0.0,  15.0],
+        [ 75.0,   0.0,  15.0]
     ], dtype=np.float64)
 
-    # Convert model coordinate convention
-    modelPoints[:, 1] *= -1
-    modelPoints[:, 2] *= -1
-
+    # Approximate camera intrinsics
     focalLength = frameWidth
 
     cameraMatrix = np.array([
@@ -110,7 +155,7 @@ def getPose(faceLandmarks, cropHeight, cropWidth,
         [0, 0, 1]
     ], dtype=np.float64)
 
-    distCoeffs = np.zeros((4, 1))
+    distCoeffs = np.zeros((4, 1), dtype=np.float64)
 
     success, rotationVector, translationVector = cv2.solvePnP(
         modelPoints,
@@ -125,32 +170,33 @@ def getPose(faceLandmarks, cropHeight, cropWidth,
 
     rotationMatrix, _ = cv2.Rodrigues(rotationVector)
 
-    angles, _, _, _, _, _ = cv2.RQDecomp3x3(rotationMatrix)
+    angles, _, _, _, _, _ = cv2.RQDecomp3x3(
+        rotationMatrix
+    )
 
-    pitch, yaw, roll = angles
+    pitch, yaw, roll = map(float, angles)
 
-    pitch, yaw, roll = float(pitch), float(yaw), float(roll)
+    # Preserve existing pitch convention
+    pitch = -pitch
 
-    # not using arbitrary pose estimation from paper
-
-    # compare absolute values for pose_x and pose_y
-    if abs(pitch) > abs(yaw):
-        if pitch > 15:
-            pose = 'right'
-        elif pitch < -15:
-            pose = 'left'
-        else:
-            pose = 'forward'
-    else:
-        if yaw < -10:
-            pose = 'down'
-        else:
-            pose = 'forward'
+    pose = classifyPose(pitch, yaw)
 
     return {
-        "pose_y": float(pitch),
-        "pose_x": float(yaw),
-        "roll": float(roll),
-        "pose": pose,
+        "pose_x": pitch,
+        "pose_y": yaw,
+        "roll": roll,
+        "pose": pose
     }
 
+
+def classifyPose(pitch, yaw):
+    # TODO: Verify against the original dataset convention
+
+    if yaw > 15:
+        return "right"
+    elif yaw < -10:
+        return "left"
+    elif pitch < -10:
+        return "down"
+    else:
+        return "forward"
