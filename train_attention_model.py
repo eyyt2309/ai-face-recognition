@@ -1,12 +1,27 @@
+
+from pathlib import Path
+
 import cv2
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, confusion_matrix
 
-csv_path = "./Students Attention Detection Dataset/attention_detection_dataset_v1.csv"
+ROOT = Path(__file__).resolve().parent
 
-df = pd.read_csv(csv_path)
+CSV_PATH = (
+    ROOT
+    / "Students Attention Detection Dataset"
+    / "attention_detection_dataset_v1.csv"
+)
 
-# convert pose text to numbers
+OUTPUT_DIR = ROOT / "models/attention_model"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+# Load dataset
+df = pd.read_csv(CSV_PATH)
+
+# Convert categorical pose into integers
 pose_map = {
     "forward": 0,
     "left": 1,
@@ -14,9 +29,15 @@ pose_map = {
     "right": 3
 }
 
-df["pose"] = df["pose"].map(pose_map)
+df["pose"] = (
+    df["pose"]
+    .astype(str)
+    .str.strip()
+    .str.lower()
+    .map(pose_map)
+)
 
-# features
+# Define the exact feature order
 feature_cols = [
     "no_of_face",
     "face_x",
@@ -36,49 +57,90 @@ feature_cols = [
     "phone_con"
 ]
 
-X = df[feature_cols].values.astype(np.float32)
-y = df["label"].values.astype(np.int32)
+# Check for missing or invalid values
+required_cols = feature_cols + ["label"]
 
-indices = np.arange(len(X))
-np.random.shuffle(indices)
+if df[required_cols].isna().any().any():
+    missing = df[required_cols].isna().sum()
+    raise ValueError(
+        f"Dataset contains missing or invalid values:\n"
+        f"{missing[missing > 0]}"
+    )
 
-X = X[indices]
-y = y[indices]
+X = df[feature_cols].to_numpy(dtype=np.float32)
+y = df["label"].to_numpy(dtype=np.int32)
 
-# train test split
-split = int(0.8 * len(X))
-X_train = X[:split]
-y_train = y[:split]
+if not np.isfinite(X).all():
+    raise ValueError("Features contain non-finite values")
 
-X_test = X[split:]
-y_test = y[split:]
+# Reproducible, stratified split
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
 
-# normalisation
-mean = X_train.mean(axis = 0)
-std = X_train.std(axis = 0)
+# Normalize using training data only
+mean = X_train.mean(axis=0)
+std = X_train.std(axis=0)
 
-std[std == 0] = 1
+std[std == 0] = 1.0
 
-X_train = (X_train - mean) / std
-X_test = (X_test - mean) / std
+X_train_scaled = (
+    (X_train - mean) / std
+).astype(np.float32)
 
-# create svm model
+X_test_scaled = (
+    (X_test - mean) / std
+).astype(np.float32)
+
+# Create linear SVM
 svm = cv2.ml.SVM_create()
 svm.setType(cv2.ml.SVM_C_SVC)
 svm.setKernel(cv2.ml.SVM_LINEAR)
 svm.setC(1.0)
 
-# train model
-svm.train(X_train, cv2.ml.ROW_SAMPLE, y_train)
+# Train
+svm.train(
+    X_train_scaled,
+    cv2.ml.ROW_SAMPLE,
+    y_train
+)
 
-# test
-_, predictions = svm.predict(X_test)
+# Evaluate
+_, predictions = svm.predict(X_test_scaled)
 predictions = predictions.flatten().astype(np.int32)
 
 accuracy = np.mean(predictions == y_test)
-print(f"Accuracy: {accuracy * 100:.2f}")
 
-# save model
-svm.save("models/attention_model/attention_svm_model.yml")
-np.savez("models/attention_model/attention_scaler.npz", mean = mean, std = std)
+print(f"\nAccuracy: {accuracy * 100:.2f}%")
 
+print("\nClassification report:")
+print(
+    classification_report(
+        y_test,
+        predictions,
+        target_names=["Attentive", "Inattentive"],
+        zero_division=0
+    )
+)
+
+print("\nConfusion matrix:")
+print(confusion_matrix(y_test, predictions))
+
+# Save model
+svm.save(
+    str(OUTPUT_DIR / "attention_svm_model.yml")
+)
+
+# Save preprocessing configuration
+np.savez(
+    OUTPUT_DIR / "attention_scaler.npz",
+    mean=mean,
+    std=std,
+    feature_cols=np.array(feature_cols)
+)
+
+print("\nModel and scaler saved successfully.")
