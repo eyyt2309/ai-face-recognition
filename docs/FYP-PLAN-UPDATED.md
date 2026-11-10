@@ -27,7 +27,7 @@ The repository contains a working baseline attention pipeline. The core webcam a
 | Attention dataset | Integrated | `datasets/attention/attention_detection_dataset_v1.csv` contains 4,000 samples with attention-related features and binary labels. |
 | Attention classifier training | Implemented | `model_training/train_attention_model.py` trains a linear OpenCV SVM with a stratified 80/20 split and training-set feature normalization. It reports accuracy, per-class metrics, and a confusion matrix. |
 | Real-time attention inference | Implemented | `src/attention/attention_tracker.py` and `predict_attention.py` load the SVM and scaler, predicts attention for each webcam frame, draws detections, and displays the result. |
-| Eye tracking | Prototype implemented, unvalidated | `src/gaze/` provides iris/head-pose gaze features, regression-based screen calibration, and preview/calibrate/track/validate modes. Verified with synthetic data and a mocked camera only; real-webcam accuracy has not been measured. |
+| Eye tracking | Prototype working, limited validation | `src/gaze/` provides iris-based gaze features, regression-based screen calibration, and preview/calibrate/track/validate modes. A first single-user webcam test gave about 129 px mean error on a 1920x1080 screen; multi-user and head-movement evaluation is still needed. |
 | Page analysis | Planned extension | Page-region mapping and gaze-derived content statistics are not implemented. |
 | Session logging and reporting | To be developed | The application displays a live prediction but does not yet save attention timelines or generate session summaries. |
 

@@ -100,8 +100,11 @@ python -m src.gaze.gaze_tracker --mode track         # live gaze point overlay
 
 Options: `--camera`, `--calibration`, `--screen WxH`, `--grid`, `--degree {1,2}`,
 `--smoothing`. Keep your head and the screen position steady between
-calibration and use; press **q** or **Esc** to quit. Accuracy has not yet been
-measured on a real webcam.
+calibration and use; press **q** or **Esc** to quit. The mapper uses only the
+iris offsets (head pose features overfit during calibration). In a first
+single-user test the mean validation error was about 130 px on a 1920x1080
+screen; each calibration also saves raw samples next to the calibration file
+for offline comparison.
 
 ## Project layout
 

@@ -402,7 +402,8 @@ def main(argv=None):
             gc.openFullscreen(windowName)
             mapper = gc.calibrate(
                 tracker, capture, screenSize, windowName,
-                grid=args.grid, degree=args.degree
+                grid=args.grid, degree=args.degree,
+                samplesPath=Path(args.calibration).with_name("calibration_samples.npz")
             )
             mapper.save(args.calibration)
             print(f"Saved calibration to {args.calibration}")
@@ -441,7 +442,10 @@ def main(argv=None):
     try:
         with GazeTracker() as tracker:
             gc.openFullscreen(windowName)
-            gc.validate(tracker, capture, mapper, screenSize, windowName)
+            gc.validate(
+                tracker, capture, mapper, screenSize, windowName,
+                samplesPath=Path(args.calibration).with_name("validation_samples.npz")
+            )
     except gc.CalibrationAborted:
         print("Validation cancelled")
     finally:

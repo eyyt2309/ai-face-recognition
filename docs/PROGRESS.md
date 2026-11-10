@@ -62,7 +62,7 @@ Legend: `[x]` done, `[~]` partly done / needs validation, `[ ]` not started.
 - [ ] Commit the reorganisation and the `docs/` folder (currently staged or untracked)
 
 ### Optional extensions
-- [~] Eye tracking (`src/gaze/gaze_tracker.py`, `src/gaze/gaze_calibration.py`): iris/head-pose gaze features, ridge-regression calibration, preview/calibrate/track/validate modes. Verified with synthetic data and mocked camera only; **not yet tested on a real webcam**. Run `python -m src.gaze.gaze_tracker`, then `--mode calibrate`, then `--mode validate`.
+- [~] Eye tracking (`src/gaze/gaze_tracker.py`, `src/gaze/gaze_calibration.py`): iris-based gaze features, ridge-regression calibration, preview/calibrate/track/validate modes. First real-webcam test (one user, 1920x1080): mean validation error about 129 px; the tracked dot follows the eyes. Still to do: more users, sessions and lighting, plus head-movement tolerance.
 - [ ] Eye tracking: measure real screen-point and region accuracy across several users/sessions
 - [ ] Integrate gaze output with attention output and session logging
 - [ ] Page and content analysis: define regions of interest and map gaze and fixation statistics to them

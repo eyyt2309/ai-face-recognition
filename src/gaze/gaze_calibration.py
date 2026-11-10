@@ -17,15 +17,30 @@ class CalibrationAborted(Exception):
     """Raised when the user cancels calibration or validation."""
 
 
-class GazeMapper:
-    """Ridge regression from gaze feature vectors to screen coordinates."""
+# Iris offsets only (h, v). Head pose and face position barely vary while
+# calibrating, so using them overfits and fails when posture changes.
+IRIS_COLUMNS = (0, 1)
+ALL_COLUMNS = (0, 1, 2, 3, 4, 5)
 
-    def __init__(self, degree=2, ridge=1.0):
+
+class GazeMapper:
+    """Ridge regression from gaze feature vectors to screen coordinates.
+
+    Callers always pass the full feature vector; `columns` selects which
+    entries are used. The first two selected columns must be h and v.
+    """
+
+    def __init__(self, degree=2, ridge=10.0, columns=IRIS_COLUMNS):
         if degree not in (1, 2):
             raise ValueError("degree must be 1 or 2")
 
+        columns = tuple(int(c) for c in columns)
+        if columns[:2] != (0, 1):
+            raise ValueError("columns must start with (0, 1)")
+
         self.degree = degree
         self.ridge = ridge
+        self.columns = columns
         self.mean = None
         self.std = None
         self.weights = None
@@ -52,6 +67,8 @@ class GazeMapper:
 
         if features.ndim != 2 or len(features) != len(targets):
             raise ValueError("features and targets must have the same length")
+
+        features = features[:, self.columns]
 
         self.mean = features.mean(axis=0)
         std = features.std(axis=0)
@@ -80,7 +97,7 @@ class GazeMapper:
             raise RuntimeError("GazeMapper has not been fitted")
 
         features = np.atleast_2d(np.asarray(features, dtype=np.float64))
-        result = self._design(features) @ self.weights
+        result = self._design(features[:, self.columns]) @ self.weights
 
         return result[0] if len(result) == 1 else result
 
@@ -107,7 +124,7 @@ class GazeMapper:
         for group in np.unique(groups):
             held = groups == group
 
-            model = GazeMapper(self.degree, self.ridge).fit(
+            model = GazeMapper(self.degree, self.ridge, self.columns).fit(
                 features[~held],
                 targets[~held]
             )
@@ -127,6 +144,7 @@ class GazeMapper:
             path,
             degree=self.degree,
             ridge=self.ridge,
+            columns=np.array(self.columns),
             mean=self.mean,
             std=self.std,
             weights=self.weights,
@@ -137,7 +155,14 @@ class GazeMapper:
     def load(cls, path):
         data = np.load(path)
 
-        mapper = cls(int(data["degree"]), float(data["ridge"]))
+        # Files saved before column selection used all six features
+        columns = (
+            tuple(int(c) for c in data["columns"])
+            if "columns" in data.files
+            else ALL_COLUMNS
+        )
+
+        mapper = cls(int(data["degree"]), float(data["ridge"]), columns)
         mapper.mean = data["mean"]
         mapper.std = data["std"]
         mapper.weights = data["weights"]
@@ -294,6 +319,20 @@ def collectSamples(
     )
 
 
+def saveSamples(path, features, targets, groups, screenSize):
+    """Keep raw samples so calibration models can be compared offline."""
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(
+        path,
+        features=features,
+        targets=targets,
+        groups=groups,
+        screenSize=np.asarray(screenSize)
+    )
+
+
 def calibrate(
     tracker,
     capture,
@@ -301,9 +340,11 @@ def calibrate(
     windowName,
     grid=4,
     degree=2,
-    ridge=1.0,
+    ridge=10.0,
+    columns=IRIS_COLUMNS,
     settleSeconds=0.8,
-    samplesPerPoint=25
+    samplesPerPoint=25,
+    samplesPath=None
 ):
     """Run the calibration routine and return a fitted GazeMapper."""
 
@@ -319,7 +360,10 @@ def calibrate(
         samplesPerPoint=samplesPerPoint
     )
 
-    mapper = GazeMapper(degree=degree, ridge=ridge).fit(
+    if samplesPath is not None:
+        saveSamples(samplesPath, features, targets, groups, screenSize)
+
+    mapper = GazeMapper(degree=degree, ridge=ridge, columns=columns).fit(
         features,
         targets,
         screenSize
@@ -345,7 +389,8 @@ def validate(
     screenSize,
     windowName,
     settleSeconds=0.8,
-    samplesPerPoint=25
+    samplesPerPoint=25,
+    samplesPath=None
 ):
     """Measure accuracy at fresh targets that were not used in calibration."""
 
@@ -362,6 +407,9 @@ def validate(
         settleSeconds=settleSeconds,
         samplesPerPoint=samplesPerPoint
     )
+
+    if samplesPath is not None:
+        saveSamples(samplesPath, features, targets, groups, screenSize)
 
     perPoint = {}
 
