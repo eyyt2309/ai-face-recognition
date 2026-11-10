@@ -4,7 +4,7 @@ from collections import Counter
 import numpy as np
 import shutil
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 
 HAND_DIR = ROOT / "datasets/hands-detection"
 PHONE_DIR = ROOT / "datasets/phones-detection"

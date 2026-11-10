@@ -1,18 +1,15 @@
-# AI Face Recognition
+# Student Attention Detection
 
-A Python webcam prototype that runs MediaPipe person/cell-phone object detection and hand landmark detection. The repository also includes a separate script for training an SVM attention classifier from the included attention dataset.
-
-> **Current scope:** the webcam script displays the camera feed and runs the detectors, but it does not yet draw detections on the video or run the trained attention classifier. The live hand feature function currently prints the number of detected hands rather than returning features. This is not an identity-recognition or facial-expression-recognition application.
-
-## Requirements
-
-- Python with the packages pinned in [`requirements.txt`](requirements.txt)
-- A working webcam
-- The model assets included in `models/`
+A webcam prototype that estimates student attention from face presence, head
+pose, hand activity, and mobile-phone detections. It combines MediaPipe face
+detection, a YOLO hand/phone detector, and a trained OpenCV SVM. This project
+does not identify people or classify facial expressions.
 
 ## Setup
 
-From the project root, create and activate a virtual environment, then install the dependencies:
+Use Python with the packages in [`requirements.txt`](requirements.txt), a
+working webcam, and the model/data assets referenced below. Create and activate
+a virtual environment from the project root:
 
 ```powershell
 py -m venv .venv
@@ -20,73 +17,90 @@ py -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-Create a `.env` file in the project root with paths to the included detector models:
+Create a root-level `.env` with paths to the detector and attention-model files.
+Relative paths are resolved from the project root:
 
 ```dotenv
-FACE_PHONE_MODEL_PATH=models/face_recognition_model/efficientdet_lite0.tflite
-HAND_MODEL_PATH=models/hand_detection_model/hand_landmarker.task
+DET_MODEL_PATH=models/customPhoneHand/best.pt
+FACE_MODEL_PATH=models/blazface/blaze_face_short_range.tflite
+SVM_MODEL_PATH=models/attention_model/attention_svm_model.yml
+SVM_NORMALISATION_PATH=models/attention_model/attention_scaler.npz
 ```
 
-These variables are read by `create_models.py` when `main.py` creates the MediaPipe detectors. The paths above are relative to the project root; run the scripts from that directory.
+## Run the webcam app
 
-## Run the webcam prototype
+From the project root:
 
 ```powershell
+python -m src.main
+```
+
+The tracking logic lives in `src/attention_tracker.py` (`AttentionTracker`),
+which can be tested directly (`--camera N` selects a camera, `--debug` prints
+per-frame features):
+
+```powershell
+python -m src.attention_tracker
+```
+
+`src/main.py` is a thin wrapper around it and can be run directly from either
+the project root or `src/`:
+
+```powershell
+python .\src\main.py
+cd .\src
 python main.py
 ```
 
-The program opens the default camera and displays its feed. Press **q** in the video window to stop. If the camera cannot be opened, check that it is connected and available to the Python process.
+The app opens the default webcam, draws detections, and displays the attention
+prediction. Press **q** in the video window to stop.
 
 ## Train the attention classifier
 
-The included dataset is `Students Attention Detection Dataset/attention_detection_dataset_v1.csv`. From the project root, run:
+Place `attention_detection_dataset_v1.csv` in
+`datasets/attention/attention_detection_dataset_v1.csv`, then run:
 
 ```powershell
-python train_attention_model.py
+python -m model_training.train_attention_model
 ```
 
-The script shuffles the rows, uses an 80/20 train/test split, standardizes the features, trains a linear SVM, prints test accuracy, and saves the classifier and scaler to:
+The script uses a reproducible, stratified 80/20 split, standardizes features
+using training-set statistics, trains a linear SVM, and reports accuracy,
+per-class metrics, and a confusion matrix. It writes the model and scaler to
+`models/attention_model/`; rerunning it overwrites those files.
 
-- `models/attention_model/attention_svm_model.yml`
-- `models/attention_model/attention_scaler.npz`
+## Train or inspect the hand/phone detector
 
-Running the training script overwrites those model files. Training is currently separate from the webcam application.
+Detector datasets belong under `datasets/`, and training runs are kept under
+`model_training/runs/attention/`. Run the training scripts from the project
+root:
 
-### Important features
+```powershell
+python -m model_training.train
+python -m model_training.train_v2
+python -m model_training.train_v3
+```
 
-| No. | Feature       | Description                                                 | Data Type   |
-| --: | ------------- | ----------------------------------------------------------- | ----------- |
-|   1 | `no_of_face`  | Number of faces found in the frame                          | Integer     |
-|   2 | `face_x`      | X-coordinate of the upper-left corner of the face           | Float       |
-|   3 | `face_y`      | Y-coordinate of the upper-left corner of the face           | Float       |
-|   4 | `face_w`      | Width of the face (in pixels)                               | Float       |
-|   5 | `face_h`      | Height of the face (in pixels)                              | Float       |
-|   6 | `face_con`    | Face detection confidence                                   | Float       |
-|   7 | `no_of_hands` | Number of detected hands                                    | Integer     |
-|   8 | `pose`        | Face orientation (`Forward` \| `Down` \| `Left` \| `Right`) | Categorical |
-|   9 | `pose_x`      | Face orientation in x-axis                                  | Float       |
-|  10 | `pose_y`      | Face orientation in y-axis                                  | Float       |
-|  11 | `phone`       | Presence of a mobile phone (`0` = absent, `1` = present)    | Integer     |
-|  12 | `phone_x`     | X-coordinate of the upper-left corner of the detected phone | Float       |
-|  13 | `phone_y`     | Y-coordinate of the upper-left corner of the detected phone | Float       |
-|  14 | `phone_w`     | Width of the phone (in pixels)                              | Float       |
-|  15 | `phone_h`     | Height of the phone (in pixels)                             | Float       |
-|  16 | `phone_con`   | Phone detection confidence                                  | Float       |
-|  17 | `label`       | Target column (`0` = Attentive, `1` = Inattentive)          | Integer     |
+See [`model_training/HAND_PREANNOTATION_README.md`](model_training/HAND_PREANNOTATION_README.md)
+for the reviewed hand-label workflow. `python model_training/test_yolo.py`
+opens the webcam to inspect the v3 detector.
 
 ## Project layout
 
-| Path                             | Purpose                                                                    |
-| -------------------------------- | -------------------------------------------------------------------------- |
-| `main.py`                        | Opens the webcam and invokes the detector/feature functions for each frame |
-| `create_models.py`               | Configures MediaPipe person/cell-phone and hand detectors                  |
-| `get_features.py`                | Extracts person/cell-phone detections and reports the hand count           |
-| `train_attention_model.py`       | Trains and evaluates the attention SVM using the included CSV              |
-| `models/face_recognition_model/` | Included EfficientDet Lite 0 model asset                                   |
-| `models/hand_detection_model/`   | Included MediaPipe hand landmark model                                     |
-| `models/attention_model/`        | Saved attention SVM and feature scaler                                     |
+| Path | Purpose |
+| --- | --- |
+| `src/` | Attention tracking module (`attention_tracker.py`), its feature/drawing/prediction helpers, and the webcam entry point |
+| `model_training/` | Model training, dataset utilities, diagnostics, and run outputs |
+| `datasets/` | Training datasets and the attention CSV |
+| `models/` | Detector and attention-model assets |
+| `docs/` | Project planning documents |
+
+The attention feature vector includes face count/bounding box/confidence, hand
+count, encoded head pose and pose angles, and phone presence/bounding
+box/confidence. Labels are `0` (Attentive) and `1` (Inattentive).
 
 ## Acknowledgements
 
-- Face/phone detector and hand landmark model assets are from [MediaPipe](https://developers.google.com/mediapipe).
-- The attention model and dataset are based on the _Students Attention Detection Dataset 2023_ by Muhammad Kamal Hossen and Mohammad Shorif Uddin.
+The attention dataset and baseline are based on the _Students Attention
+Detection Dataset 2023_ by Muhammad Kamal Hossen and Mohammad Shorif Uddin.
+MediaPipe and Ultralytics provide the detection components used by the project.

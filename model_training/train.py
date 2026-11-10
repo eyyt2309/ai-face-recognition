@@ -5,19 +5,20 @@ from ultralytics import YOLO
 
 
 def main():
-    ROOT = Path(__file__).resolve().parent
+    PROJECT_ROOT = Path(__file__).resolve().parents[1]
+    TRAINING_ROOT = Path(__file__).resolve().parent
 
-    model = YOLO("yolo26n.pt")
+    model = YOLO(str(PROJECT_ROOT / "models/yolo/yolo26n.pt"))
 
     model.train(
-        data=str(ROOT / "datasets/hands-phones/data.yaml"),
+        data=str(PROJECT_ROOT / "datasets/hands-phones/data.yaml"),
         epochs=100,
         imgsz=640,
         batch=16,
         patience=20,
         device=0,
         workers=4,
-        project=str(ROOT / "runs/attention"),
+        project=str(TRAINING_ROOT / "runs/attention"),
         name="hands_phones"
     )
 

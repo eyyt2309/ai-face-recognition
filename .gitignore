@@ -222,6 +222,11 @@ models/
 
 # Datasets
 datasets/
+!datasets/
+datasets/*
+!datasets/attention/
+datasets/attention/*
+!datasets/attention/attention_detection_dataset_v1.csv
 
 # Model Training
 model_training/runs/

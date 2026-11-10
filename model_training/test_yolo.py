@@ -1,8 +1,12 @@
 
 import cv2
+from pathlib import Path
 from ultralytics import YOLO
 
-model = YOLO("runs/attention/hands_phones_v3/weights/best.pt")
+ROOT = Path(__file__).resolve().parents[1]
+model = YOLO(
+    str(ROOT / "model_training/runs/attention/hands_phones_v3/weights/best.pt")
+)
 
 print("Model classes:", model.names)
 

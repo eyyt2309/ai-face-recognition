@@ -40,4 +40,4 @@ This copies `datasets/hands-phones` to `datasets/hands-phones-v2` (including ima
 
 Only `train` receives proposals by default. The untouched validation/test labels remain incomplete for the two-class task. They must be independently audited/corrected before relying on metrics. Source hand images also need a review for missing phones. Unlabelled hands in images without proposals remain missing, and `PENDING` proposals remain unmerged. Do not use unreviewed pseudo-labels as ground truth.
 
-If using the v2 dataset for a comparative training experiment, use a separate fully annotated webcam test set, start with `runs/attention/hands_phones/weights/best.pt`, and evaluate both classes before/after fine-tuning.
+If using the v2 dataset for a comparative training experiment, use a separate fully annotated webcam test set, start with `model_training/runs/attention/hands_phones/weights/best.pt`, and evaluate both classes before/after fine-tuning.

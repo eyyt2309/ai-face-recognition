@@ -7,11 +7,12 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 
 CSV_PATH = (
     ROOT
-    / "Students Attention Detection Dataset"
+    / "datasets"
+    / "attention"
     / "attention_detection_dataset_v1.csv"
 )
 

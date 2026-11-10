@@ -2,7 +2,8 @@
 from pathlib import Path
 from collections import Counter
 
-root = Path("datasets/hands-detection/labels")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+root = PROJECT_ROOT / "datasets/hands-detection/labels"
 issues = Counter()
 
 for label_path in root.rglob("*.txt"):

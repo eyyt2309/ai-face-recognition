@@ -2,7 +2,8 @@
 from pathlib import Path
 from collections import Counter
 
-dataset = Path("datasets/phones-detection")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+dataset = PROJECT_ROOT / "datasets/phones-detection"
 
 formats = Counter()
 invalid_files = []
