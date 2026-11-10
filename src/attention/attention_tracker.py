@@ -2,7 +2,7 @@
 
 Usage as a module:
 
-    from src.attention_tracker import AttentionTracker
+    from src.attention.attention_tracker import AttentionTracker
 
     with AttentionTracker() as tracker:
         result = tracker.process(frame)
@@ -10,13 +10,12 @@ Usage as a module:
 
 Run directly to test with the default webcam:
 
-    python -m src.attention_tracker [--camera 0] [--debug]
+    python -m src.attention.attention_tracker [--camera 0] [--debug]
 """
 
 import argparse
 import os
 import time
-from pathlib import Path
 
 import cv2
 import mediapipe as mp
@@ -24,32 +23,8 @@ import numpy as np
 from dotenv import load_dotenv
 from ultralytics import YOLO
 
-if __package__:
-    from . import draw_features, get_features, predict_attention
-else:
-    import draw_features
-    import get_features
-    import predict_attention
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-
-
-def resolveModelPath(value, variableName):
-    """Resolve a model path, treating relative paths as project-root relative."""
-
-    if not value:
-        raise RuntimeError(
-            f"{variableName} is not set in the project .env file"
-        )
-
-    path = Path(value)
-    if not path.is_absolute():
-        path = PROJECT_ROOT / path
-    if not path.is_file():
-        raise FileNotFoundError(
-            f"{variableName} points to a missing file: {path}"
-        )
-    return path
+from ..config import PROJECT_ROOT, resolveModelPath
+from . import draw_features, get_features, predict_attention
 
 
 class AttentionTracker:

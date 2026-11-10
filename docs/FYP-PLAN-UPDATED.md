@@ -21,13 +21,14 @@ The repository contains a working baseline attention pipeline. The core webcam a
 
 | Component | Current Status | Evidence in Current Codebase |
 | --- | --- | --- |
-| Webcam acquisition | Implemented | `src/main.py` captures frames using OpenCV. |
-| Face detection and head pose | Implemented baseline | `src/get_features.py` uses MediaPipe face detection, estimates head pose from face keypoints, and extracts face bounding-box and confidence features. |
-| Hand and phone detection | Implemented baseline | `src/get_features.py` uses the configured YOLO model to detect hands and phones and extracts counts, bounding boxes, and confidence values. |
+| Webcam acquisition | Implemented | `src/attention/attention_tracker.py` (`runWebcam`, launched via `src/main.py`) captures frames using OpenCV. |
+| Face detection and head pose | Implemented baseline | `src/attention/get_features.py` uses MediaPipe face detection, estimates head pose from face keypoints, and extracts face bounding-box and confidence features. |
+| Hand and phone detection | Implemented baseline | `src/attention/get_features.py` uses the configured YOLO model to detect hands and phones and extracts counts, bounding boxes, and confidence values. |
 | Attention dataset | Integrated | `datasets/attention/attention_detection_dataset_v1.csv` contains 4,000 samples with attention-related features and binary labels. |
 | Attention classifier training | Implemented | `model_training/train_attention_model.py` trains a linear OpenCV SVM with a stratified 80/20 split and training-set feature normalization. It reports accuracy, per-class metrics, and a confusion matrix. |
-| Real-time attention inference | Implemented | `src/main.py` loads the SVM and scaler, predicts attention for each webcam frame, draws detections, and displays the result. |
-| Eye tracking and page analysis | Planned extension | Gaze calibration, page-region mapping, and gaze-derived content statistics are not implemented. |
+| Real-time attention inference | Implemented | `src/attention/attention_tracker.py` and `predict_attention.py` load the SVM and scaler, predicts attention for each webcam frame, draws detections, and displays the result. |
+| Eye tracking | Prototype implemented, unvalidated | `src/gaze/` provides iris/head-pose gaze features, regression-based screen calibration, and preview/calibrate/track/validate modes. Verified with synthetic data and a mocked camera only; real-webcam accuracy has not been measured. |
+| Page analysis | Planned extension | Page-region mapping and gaze-derived content statistics are not implemented. |
 | Session logging and reporting | To be developed | The application displays a live prediction but does not yet save attention timelines or generate session summaries. |
 
 The dataset labels are `0` (Attentive) and `1` (Inattentive). Dataset metrics are a baseline; they do not by themselves establish performance on live webcam footage.

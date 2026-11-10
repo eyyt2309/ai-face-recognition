@@ -35,12 +35,12 @@ From the project root:
 python -m src.main
 ```
 
-The tracking logic lives in `src/attention_tracker.py` (`AttentionTracker`),
+The tracking logic lives in `src/attention/attention_tracker.py` (`AttentionTracker`),
 which can be tested directly (`--camera N` selects a camera, `--debug` prints
 per-frame features):
 
 ```powershell
-python -m src.attention_tracker
+python -m src.attention.attention_tracker
 ```
 
 `src/main.py` is a thin wrapper around it and can be run directly from either
@@ -85,11 +85,31 @@ See [`model_training/HAND_PREANNOTATION_README.md`](model_training/HAND_PREANNOT
 for the reviewed hand-label workflow. `python model_training/test_yolo.py`
 opens the webcam to inspect the v3 detector.
 
+## Eye tracking (optional extension)
+
+`src/gaze/gaze_tracker.py` estimates where on the screen you are looking from iris
+position and head pose (MediaPipe face landmarker), mapped to screen
+coordinates by a short per-user calibration (`src/gaze/gaze_calibration.py`).
+
+```powershell
+python -m src.gaze.gaze_tracker                      # preview: landmarks and gaze features
+python -m src.gaze.gaze_tracker --mode calibrate     # look at each dot; saves models/gaze/gaze_calibration.npz
+python -m src.gaze.gaze_tracker --mode validate      # reports pixel error on fresh points
+python -m src.gaze.gaze_tracker --mode track         # live gaze point overlay
+```
+
+Options: `--camera`, `--calibration`, `--screen WxH`, `--grid`, `--degree {1,2}`,
+`--smoothing`. Keep your head and the screen position steady between
+calibration and use; press **q** or **Esc** to quit. Accuracy has not yet been
+measured on a real webcam.
+
 ## Project layout
 
 | Path | Purpose |
 | --- | --- |
-| `src/` | Attention tracking module (`attention_tracker.py`), its feature/drawing/prediction helpers, and the webcam entry point |
+| `src/attention/` | Attention tracking module (`attention_tracker.py`) and its feature, drawing and prediction helpers |
+| `src/gaze/` | Eye-tracking modules (`gaze_tracker.py`, `gaze_calibration.py`) |
+| `src/` | Shared `config.py` and the `main.py` webcam entry point |
 | `model_training/` | Model training, dataset utilities, diagnostics, and run outputs |
 | `datasets/` | Training datasets and the attention CSV |
 | `models/` | Detector and attention-model assets |

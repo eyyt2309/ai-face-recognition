@@ -10,23 +10,23 @@ Legend: `[x]` done, `[~]` partly done / needs validation, `[ ]` not started.
 ## Implemented
 
 ### Core pipeline
-- [x] Webcam capture and display loop (`src/attention_tracker.py`, `runWebcam`)
+- [x] Webcam capture and display loop (`src/attention/attention_tracker.py`, `runWebcam`)
 - [x] Reusable `AttentionTracker` module: `process(frame)`, `annotate(frame, result)`, context-manager support
-- [x] Direct-test entry point: `python -m src.attention_tracker [--camera N] [--debug]`
+- [x] Direct-test entry point: `python -m src.attention.attention_tracker [--camera N] [--debug]`
 - [x] Thin wrapper `src/main.py`, runnable from the project root or `src/`
 - [x] Model paths configured through `.env` (relative paths resolve from the project root)
 
-### Feature extraction (`src/get_features.py`)
+### Feature extraction (`src/attention/get_features.py`)
 - [x] Face detection (MediaPipe BlazeFace) with bounding box and confidence
 - [x] Head pose estimation via `solvePnP` from face keypoints (pitch, yaw, roll) and pose class
 - [x] Hand and phone detection via the custom YOLO model, with counts, boxes and confidence
-- [x] On-screen drawing of faces, keypoints, hands, phone and counts (`src/draw_features.py`)
+- [x] On-screen drawing of faces, keypoints, hands, phone and counts (`src/attention/draw_features.py`)
 
 ### Attention classifier
 - [x] Attention dataset in `datasets/attention/` (4,000 samples; 2,314 attentive / 1,686 inattentive)
 - [x] SVM training script with stratified 80/20 split, scaling, and metrics report (`model_training/train_attention_model.py`)
 - [x] Trained SVM and scaler saved in `models/attention_model/`
-- [x] Real-time SVM inference and on-screen label (`src/predict_attention.py`)
+- [x] Real-time SVM inference and on-screen label (`src/attention/predict_attention.py`)
 
 ### Detector training (hands and phones)
 - [x] Hand and phone datasets merged into `datasets/hands-phones` (`model_training/merge_datasets.py`)
@@ -42,7 +42,7 @@ Legend: `[x]` done, `[~]` partly done / needs validation, `[ ]` not started.
 ## Needs validation (implemented but unverified)
 
 - [~] Record baseline SVM metrics (accuracy, precision, recall, F1, confusion matrix) and compare against simple baselines. The training script prints them, but no results are saved.
-- [~] Confirm the head-pose thresholds match the original dataset's convention (`classifyPose` in `src/get_features.py` still carries a TODO).
+- [~] Confirm the head-pose thresholds match the original dataset's convention (`classifyPose` in `src/attention/get_features.py` still carries a TODO).
 - [~] Confirm live features match training features. This covers units and scale (for example, face confidence is multiplied by 100 at inference), pose encoding and feature order.
 - [~] Audit validation/test labels of the hand/phone dataset. Metrics are unreliable while they are incomplete (see `model_training/HAND_PREANNOTATION_README.md`).
 - [~] Validate on independent webcam sessions rather than the dataset split alone.
@@ -62,7 +62,9 @@ Legend: `[x]` done, `[~]` partly done / needs validation, `[ ]` not started.
 - [ ] Commit the reorganisation and the `docs/` folder (currently staged or untracked)
 
 ### Optional extensions
-- [ ] Eye tracking: gaze estimation and calibration; evaluate screen-point and region accuracy
+- [~] Eye tracking (`src/gaze/gaze_tracker.py`, `src/gaze/gaze_calibration.py`): iris/head-pose gaze features, ridge-regression calibration, preview/calibrate/track/validate modes. Verified with synthetic data and mocked camera only; **not yet tested on a real webcam**. Run `python -m src.gaze.gaze_tracker`, then `--mode calibrate`, then `--mode validate`.
+- [ ] Eye tracking: measure real screen-point and region accuracy across several users/sessions
+- [ ] Integrate gaze output with attention output and session logging
 - [ ] Page and content analysis: define regions of interest and map gaze and fixation statistics to them
 - [ ] Interest-based recommendation prototype (stretch goal)
 
