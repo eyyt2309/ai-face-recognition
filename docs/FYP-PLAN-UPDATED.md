@@ -29,7 +29,7 @@ The repository contains a working baseline attention pipeline. The core webcam a
 | Real-time attention inference | Implemented | `src/attention/attention_tracker.py` and `predict_attention.py` load the SVM and scaler, predicts attention for each webcam frame, draws detections, and displays the result. |
 | Eye tracking | Prototype working, limited validation | `src/gaze/` provides iris-based gaze features, regression-based screen calibration, and preview/calibrate/track/validate modes. A first single-user webcam test gave about 129 px mean error on a 1920x1080 screen; multi-user and head-movement evaluation is still needed. |
 | Page analysis | Planned extension | Page-region mapping and gaze-derived content statistics are not implemented. |
-| Session logging and reporting | To be developed | The application displays a live prediction but does not yet save attention timelines or generate session summaries. |
+| Session logging and reporting | Prototype implemented, unvalidated | `src/session/` records attention and gaze per frame to CSV and `analyse.py` reports sustained inattention periods with likely causes, attention per time window and marked section, and gaze off-screen statistics, with a timeline chart. Verified on synthetic and mocked data only; not yet on real study sessions. An instructor-facing view is still to be developed. |
 
 The dataset labels are `0` (Attentive) and `1` (Inattentive). Dataset metrics are a baseline; they do not by themselves establish performance on live webcam footage.
 

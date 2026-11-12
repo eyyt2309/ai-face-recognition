@@ -230,3 +230,6 @@ datasets/attention/*
 
 # Model Training
 model_training/runs/
+
+# Recorded study sessions (personal data)
+sessions/

@@ -106,12 +106,32 @@ single-user test the mean validation error was about 130 px on a 1920x1080
 screen; each calibration also saves raw samples next to the calibration file
 for offline comparison.
 
+## Record and analyse a study session
+
+```powershell
+python -m src.session.record                 # attention + gaze (if calibrated)
+python -m src.session.record --no-gaze       # attention only
+python -m src.session.analyse                # analyse the newest session
+python -m src.session.analyse sessions/session_20261110_150000.csv --window 60
+```
+
+While recording, press **m** in the preview window to mark the start of a new
+section (for example a new lecture topic) and **q** to stop. Recordings are
+saved under `sessions/` (git-ignored, since they are personal data) as a CSV
+with a `.meta.json` file. The analysis prints and saves a report with overall
+attention, sustained inattention periods and their likely cause (no face,
+phone, looking away), attention per time window and per marked section, and
+where the gaze fell on the screen, plus a timeline chart (`*_timeline.png`).
+Run the tests with `python -m unittest discover -s tests -t .`.
+
 ## Project layout
 
 | Path | Purpose |
 | --- | --- |
 | `src/attention/` | Attention tracking module (`attention_tracker.py`) and its feature, drawing and prediction helpers |
 | `src/gaze/` | Eye-tracking modules (`gaze_tracker.py`, `gaze_calibration.py`) |
+| `src/session/` | Session recording (`record.py`, `session_logger.py`) and post-session analysis (`analyse.py`) |
+| `tests/` | Unit tests |
 | `src/` | Shared `config.py` and the `main.py` webcam entry point |
 | `model_training/` | Model training, dataset utilities, diagnostics, and run outputs |
 | `datasets/` | Training datasets and the attention CSV |
